@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from zlib import crc32
 from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
 
 # Loads the data from the 1990 California Housing Prices dataset
 def load_housing_data():
@@ -37,6 +39,7 @@ def describe_data(housing_data):
     plt.show()
 
 
+# Create plots and new attributes from the data to gain insights
 def explore_data(housing_data):
     # Show where the data is most concentrated
     housing_data.plot(kind="scatter", x="longitude", y="latitude", grid=True, alpha=0.2)
@@ -67,6 +70,30 @@ def explore_data(housing_data):
     plt.show()
 
 
+# Fill in the missing data (i.e., total_bedrooms)
+def impute_missing_data(housing_data):
+    imputer = SimpleImputer(strategy="median")
+    housing_numeric = housing_data.select_dtypes(include=[np.number])
+
+    # The below code can be replaced by imputer.fit_transform(housing_numeric)
+    imputer.fit(housing_numeric)
+    print("Imputed values (same as median):", imputer.statistics_)
+    X = imputer.transform(housing_numeric)
+
+    # Since transform() returns a NumPy array, need to recover columns and index
+    housing_transformed = pd.DataFrame(X, columns=housing_numeric.columns, index=housing_numeric.index)
+    return housing_transformed
+
+
+# One-hot encode categorical text values (ocean proximity)
+def one_hot_encode(housing_data):
+    housing_cat = housing_data[["ocean_proximity"]]
+    cat_encoder = OneHotEncoder()
+    housing_cat_1hot = cat_encoder.fit_transform(housing_cat)
+    print(housing_cat_1hot.toarray())
+    return housing_cat_1hot
+
+
 if __name__ == "__main__":
     housing_data = load_housing_data()
     # describe_data(housing_data)
@@ -86,6 +113,18 @@ if __name__ == "__main__":
     strat_test_set.drop("income_cat", axis=1, inplace=True)
     
     housing_data = strat_train_set.copy()   # Don't want to explore any of the test set
-    explore_data(housing_data)
+    # explore_data(housing_data)
 
+    # Split the rest of the data features (e.g. income, total rooms) from the labels (median house value - the value we want to predict)
+    housing_data = strat_train_set.drop("median_house_value", axis=1)
+    housing_labels = strat_train_set["median_house_value"].copy()
+
+    # Impute missing numeric values (i.e. total_bedrooms) with the median of the attribute
+    housing_tr = impute_missing_data(housing_data)  # All numeric
+    
+    # One-hot encode the categorical text values (ocean_proximity)
+    housing_cat_1hot = one_hot_encode(housing_data)
+
+    
+    
 
